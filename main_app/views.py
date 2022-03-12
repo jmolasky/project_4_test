@@ -1,11 +1,19 @@
 from django.shortcuts import render
 from .models import Wallet, CryptoCurrency, Amount
+from decouple import config
+from requests import Request, Session
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+import json
 
 # Create your views here.
 
-API_URL = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest/'
-api_key = '0bbe40e4-ecd1-4154-832e-e94024a5dd46'
+url = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest'
+api_key = config('api_key')
 
+headers = {
+    'Accepts': 'application/json',
+    'X-CMC_PRO_API_KEY': api_key,
+}
 
 def home(request):
     return render(request, 'home.html')
@@ -18,14 +26,41 @@ def wallets_detail(request, wallet_id):
     wallet = Wallet.objects.get(id=wallet_id)
     # query database for a specific wallet's coins
     wallet_coins = Amount.objects.filter(wallet=wallet_id)
-    # TODO: use the API to pull additional data about each currency to display - will need to do some
-    # math etc. to get this to work but it should be doable
-   
+    symbols_arr = []
+    for coin in wallet_coins:
+        symbol = coin.crypto.symbol
+        symbols_arr.append(symbol)
+    symbols = ','.join(symbols_arr)
+
+    parameters = {
+        'symbol': symbols
+    }
+
+    session = Session()
+    session.headers.update(headers)
+    try:
+        response = session.get(url, params=parameters)
+        data = json.loads(response.text)
+        data = data['data']
+        coins = []
+        for symbol in symbols_arr:
+            coin_obj = data[symbol][0]
+            obj = {
+                'symbol': symbol,
+                'name': coin_obj['name'],
+                'last_updated': coin_obj['last_updated'],
+                'quote': coin_obj['quote']['USD'],
+            }
+            coins.append(obj)
+            print(coins)
+    except (ConnectionError, Timeout, TooManyRedirects) as e:
+        print(e)
+
     coins_not_in_wallet = CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
 
     return render(request, 'wallets/detail.html', {
         'wallet': wallet,
         'avail_coins': coins_not_in_wallet,
-        'coins': wallet_coins,
+        'coins': coins,
     })
 
