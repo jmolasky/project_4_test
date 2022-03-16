@@ -26,12 +26,25 @@ def wallets_detail(request, wallet_id):
     wallet = Wallet.objects.get(id=wallet_id)
     # query database for a specific wallet's coins
     wallet_coins = Amount.objects.filter(wallet=wallet_id)
-    symbols_arr = []
+    print(wallet_coins)
+    # symbols_arr = []
+    coins_arr = []
     for coin in wallet_coins:
-        symbol = coin.crypto.symbol
-        symbols_arr.append(symbol)
-    symbols = ','.join(symbols_arr)
+        # symbol = coin.crypto.symbol
+        # symbols_arr.append(symbol)
+        coin_object = {
+            'symbol': coin.crypto.symbol,
+            'amount': coin.amount,
+        }
+        coins_arr.append(coin_object)
+    print(coins_arr)
 
+    symbols_arr = []
+    for coin in coins_arr:
+        symbols_arr.append(coin['symbol'])
+
+    symbols = ','.join(symbols_arr)
+    print(symbols)
     parameters = {
         'symbol': symbols
     }
@@ -43,20 +56,31 @@ def wallets_detail(request, wallet_id):
         data = json.loads(response.text)
         data = data['data']
         coins = []
-        for symbol in symbols_arr:
-            coin_obj = data[symbol][0]
+        # for symbol in symbols_arr:
+        #     coin_obj = data[symbol][0]
+        #     obj = {
+        #         'symbol': symbol,
+        #         'name': coin_obj['name'],
+        #         'last_updated': coin_obj['last_updated'],
+        #         'quote': coin_obj['quote']['USD'],
+        #     }
+        for coin in coins_arr:
+            coin_obj = data[coin['symbol']][0]
             obj = {
-                'symbol': symbol,
+                'symbol': coin['symbol'],
                 'name': coin_obj['name'],
+                'amount': coin['amount'],
                 'last_updated': coin_obj['last_updated'],
                 'quote': coin_obj['quote']['USD'],
             }
+
             coins.append(obj)
-            print(coins)
+        print(coins)
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
 
     coins_not_in_wallet = CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
+    print(coins_not_in_wallet)
 
     return render(request, 'wallets/detail.html', {
         'wallet': wallet,
