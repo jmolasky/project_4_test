@@ -66,9 +66,6 @@ def wallets_index(request):
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
     
-    # for wallet in wallets_arr:
-    #     for coin in wallet['coins']:
-    #       coin['price'] = 
     for wallet in wallets_arr:
         for coin in wallet['coins']:
             for obj in coins:
@@ -77,71 +74,5 @@ def wallets_index(request):
     print(wallets_arr)
     return render(request, 'wallets/index.html', {
         'wallets': wallets,
-    })
-
-def wallets_detail(request, wallet_id):
-    wallet = Wallet.objects.get(id=wallet_id)
-    # query database for a specific wallet's coins
-    wallet_coins = Amount.objects.filter(wallet=wallet_id)
-    print(wallet_coins)
-    # symbols_arr = []
-    coins_arr = []
-    for coin in wallet_coins:
-        # symbol = coin.crypto.symbol
-        # symbols_arr.append(symbol)
-        coin_object = {
-            'symbol': coin.crypto.symbol,
-            'amount': coin.amount,
-        }
-        coins_arr.append(coin_object)
-    print(coins_arr)
-
-    symbols_arr = []
-    for coin in coins_arr:
-        symbols_arr.append(coin['symbol'])
-
-    symbols = ','.join(symbols_arr)
-    print(symbols)
-    parameters = {
-        'symbol': symbols
-    }
-
-    session = Session()
-    session.headers.update(headers)
-    try:
-        response = session.get(url, params=parameters)
-        data = json.loads(response.text)
-        data = data['data']
-        coins = []
-        # for symbol in symbols_arr:
-        #     coin_obj = data[symbol][0]
-        #     obj = {
-        #         'symbol': symbol,
-        #         'name': coin_obj['name'],
-        #         'last_updated': coin_obj['last_updated'],
-        #         'quote': coin_obj['quote']['USD'],
-        #     }
-        for coin in coins_arr:
-            coin_obj = data[coin['symbol']][0]
-            obj = {
-                'symbol': coin['symbol'],
-                'name': coin_obj['name'],
-                'amount': coin['amount'],
-                'last_updated': coin_obj['last_updated'],
-                'quote': coin_obj['quote']['USD'],
-            }
-
-            coins.append(obj)
-        print(coins)
-    except (ConnectionError, Timeout, TooManyRedirects) as e:
-        print(e)
-
-    coins_not_in_wallet = CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
-    print(coins_not_in_wallet)
-
-    return render(request, 'wallets/detail.html', {
-        'wallet': wallet,
-        'avail_coins': coins_not_in_wallet,
-        'coins': coins,
     })
 
