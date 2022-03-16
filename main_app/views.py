@@ -56,14 +56,6 @@ def wallets_detail(request, wallet_id):
         data = json.loads(response.text)
         data = data['data']
         coins = []
-        # for symbol in symbols_arr:
-        #     coin_obj = data[symbol][0]
-        #     obj = {
-        #         'symbol': symbol,
-        #         'name': coin_obj['name'],
-        #         'last_updated': coin_obj['last_updated'],
-        #         'quote': coin_obj['quote']['USD'],
-        #     }
         for coin in coins_arr:
             coin_obj = data[coin['symbol']][0]
             obj = {
