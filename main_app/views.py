@@ -19,64 +19,60 @@ def home(request):
     return render(request, 'home.html')
 
 def wallets_index(request):
+    # get all wallets
     wallets = Wallet.objects.all()
-    return render(request, 'wallets/index.html', {'wallets': wallets})
-
-def wallets_detail(request, wallet_id):
-    wallet = Wallet.objects.get(id=wallet_id)
-    # query database for a specific wallet's coins
-    wallet_coins = Amount.objects.filter(wallet=wallet_id)
-    print(wallet_coins)
-    # symbols_arr = []
-    coins_arr = []
-    for coin in wallet_coins:
-        # symbol = coin.crypto.symbol
-        # symbols_arr.append(symbol)
-        coin_object = {
-            'symbol': coin.crypto.symbol,
-            'amount': coin.amount,
-        }
-        coins_arr.append(coin_object)
-    print(coins_arr)
-
     symbols_arr = []
-    for coin in coins_arr:
-        symbols_arr.append(coin['symbol'])
-
+    wallets_arr = []
+    for wallet in wallets:
+        coins_arr = []
+        wallet_coins = Amount.objects.filter(wallet=wallet.id)
+        for coin in wallet_coins:
+            if (coin.crypto.symbol not in symbols_arr):
+                symbols_arr.append(coin.crypto.symbol)
+            coin_object = {
+                'symbol': coin.crypto.symbol,
+                'amount': coin.amount,
+            }
+            coins_arr.append(coin_object)
+        wallet_obj = {
+            'name': wallet.name,
+            'coins': coins_arr,
+        }
+        # add coins_not_in_wallet to each wallet
+        wallet_obj['coins_not_in_wallet'] =  CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
+        wallets_arr.append(wallet_obj)
+    # get all symbols in all wallets
     symbols = ','.join(symbols_arr)
-    print(symbols)
     parameters = {
         'symbol': symbols
     }
-
     session = Session()
     session.headers.update(headers)
     try:
+        # api call for all coins in all wallets
         response = session.get(url, params=parameters)
         data = json.loads(response.text)
         data = data['data']
         coins = []
-        for coin in coins_arr:
-            coin_obj = data[coin['symbol']][0]
+        for symbol in symbols_arr:
+            coin_obj = data[symbol][0]
             obj = {
-                'symbol': coin['symbol'],
+                'symbol': symbol,
                 'name': coin_obj['name'],
-                'amount': coin['amount'],
                 'last_updated': coin_obj['last_updated'],
                 'quote': coin_obj['quote']['USD'],
             }
-
             coins.append(obj)
-        print(coins)
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
-
-    coins_not_in_wallet = CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
-    print(coins_not_in_wallet)
-
-    return render(request, 'wallets/detail.html', {
-        'wallet': wallet,
-        'avail_coins': coins_not_in_wallet,
-        'coins': coins,
+    
+    for wallet in wallets_arr:
+        for coin in wallet['coins']:
+            for obj in coins:
+                if obj['symbol'] == coin['symbol']:
+                    coin['price'] = obj['quote']['price']
+    print(wallets_arr)
+    return render(request, 'wallets/index.html', {
+        'wallets': wallets,
     })
 
