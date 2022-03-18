@@ -15,15 +15,14 @@
 <div class="row">
   <div class="col s6">
     <h3>{{ wallet.name }}'s Coins</h3>
-    {% if coins %} 
-      {% for coin in coins %}
+    {% if wallet.coins %} 
+      {% for coin in wallet.coins %}
       <div class="card">
         <div class="card-content">
             {{ coin.amount }}
           <span class="card-title">
-              {{ coin.symbol }}
+              {{ coin.crypto.symbol }}
           </span>
-          Last updated: {{ coin.last_updated }}
         </div>
       </div>
       {% endfor %} 
