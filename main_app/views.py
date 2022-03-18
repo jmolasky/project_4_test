@@ -1,5 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import Wallet, CryptoCurrency, Amount
+from .forms import WalletForm
 from decouple import config
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
@@ -35,6 +36,7 @@ def wallets_index(request):
             }
             coins_arr.append(coin_object)
         wallet_obj = {
+            'id': wallet.id,
             'name': wallet.name,
             'coins': coins_arr,
         }
@@ -71,8 +73,33 @@ def wallets_index(request):
             for obj in coins:
                 if obj['symbol'] == coin['symbol']:
                     coin['price'] = obj['quote']['price']
-    print(wallets_arr)
-    return render(request, 'wallets/index.html', {
-        'wallets': wallets,
+                    coin['name'] = obj['name']
+    print(f"wallets array: {wallets_arr}")
+    wallet_form = WalletForm()
+    return render(request, 'dashboard.html', {
+        'wallets': wallets_arr,
+        'wallet_form': wallet_form,
+    })
+
+def add_wallet(request):
+    form = WalletForm(request.POST)
+    if form.is_valid():
+        new_wallet = form.save(commit=False)
+        # this is where you would attach the user id with request.user
+        new_wallet.save()
+    return redirect('dashboard')
+
+def wallets_detail(request, wallet_id):
+    wallet = Wallet.objects.get(id=wallet_id)
+    wallet_coins = Amount.objects.filter(wallet=wallet.id)
+    coins_not_in_wallet = CryptoCurrency.objects.exclude(id__in=wallet_coins.values_list('crypto'))
+    wallet_obj = {
+        'id': wallet.id,
+        'name': wallet.name,
+        'coins': wallet_coins,
+    }
+    return render(request, 'wallets/detail.html', { 
+        'wallet': wallet_obj, 
+        'avail_coins': coins_not_in_wallet 
     })
 
